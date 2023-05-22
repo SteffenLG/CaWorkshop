@@ -13,6 +13,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+builder.Services.AddScoped<ApplicationDbContextInitialiser>();
+
 builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
@@ -25,7 +27,32 @@ builder.Services.AddAuthentication()
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
 
+// 🔥 Code omitted for clarity 🔥
+builder.Services.AddOpenApiDocument(configure =>
+{
+    configure.Title = "CaWorkshop API";
+});
+
 var app = builder.Build();
+
+#if DEBUG
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var initialiser = scope.ServiceProvider.GetRequiredService<ApplicationDbContextInitialiser>();
+        initialiser.Initialise();
+        initialiser.Seed();
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred during database initialisation.");
+
+        throw;
+    }
+}
+#endif
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -40,6 +67,11 @@ else
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
+app.UseOpenApi();
+app.UseSwaggerUi3();
+app.UseReDoc(conf => conf.Path = "/redoc");
+
 app.UseRouting();
 
 app.UseAuthentication();

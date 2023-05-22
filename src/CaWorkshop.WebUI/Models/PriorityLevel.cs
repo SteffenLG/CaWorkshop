@@ -1,3 +1,5 @@
+namespace CaWorkshop.WebUI.Models;
+
 public enum PriorityLevel
 {
     None,
